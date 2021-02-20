@@ -115,8 +115,8 @@ namespace CaptchaPack_Generator
         }		
     }//end class FileUtil
 
-	//Generate random captcha text, and return captcha image for this text, with b/w image in Captcha.imageBits (static) or created_captcha_object._imagebits (non-static)
-    public class Captcha
+	//Generate random captcha text, and return captcha image for this text, with b/w image in Captcha_Generator.imageBits (static) or created_captcha_object._imagebits (non-static)
+    public class Captcha_generator
     {
 //        private static Random Randomizer = new Random(DateTime.Now.Second);	//old code
 		private static Random Randomizer = null;		//make this more crypto-strength, and create this object once in Program class.
@@ -127,7 +127,7 @@ namespace CaptchaPack_Generator
 		public static string DataUriPngPrefix = "data:image/png;base64,";
 		public string _imageBits_dataURI { get; set; }
 
-        public Captcha(Random set_defined_Randomizer) // Captcha-object constructor
+        public Captcha_generator(Random set_defined_Randomizer) // Captcha-object constructor
         {
 			Randomizer = set_defined_Randomizer;		//set already predefined randomizer
             Text = GetRandomText();						//Generate random captcha-text.
@@ -209,7 +209,7 @@ namespace CaptchaPack_Generator
             return bmp;
         }
 
-		//return captcha image from specified/generated text, and set not compressed image, and compressed image-bits as bytearray Captcha.imageBits
+		//return captcha image from specified/generated text, and set not compressed image, and compressed image-bits as bytearray Captcha_generator.imageBits
         private static byte[] CreateCaptcha(string text)
         {
             byte[] byteArray = null;
@@ -259,7 +259,7 @@ namespace CaptchaPack_Generator
             return byteArray;	//and return not compressed image, as bytearray
         }
 
-    }//end class Captcha
+    }//end class Captcha_generator
 	
 	public class Program{
 		//make this Randomizer more crypto-strength, and define this once
@@ -316,7 +316,7 @@ namespace CaptchaPack_Generator
 			//Start to generate 1024*1024 different captchas:
 			for(int i = 0; i<1048576; i++){
 				//create new captcha with public static Randomizer, which was been already defined once. Don't create this Randomizer again and again for each object.	
-				Captcha captcha_image = new Captcha(Randomizer);
+				Captcha_generator captcha_image = new Captcha_generator(Randomizer);
 				//	generate in the cycle the many bitmaps 1000 bits = 1000 pixels, black or white, 20x50 with captchas, and save this with answer filename.
 
 				if	(	save_captcha_images_as_files 	== 	true	){	//as optional param.
@@ -352,9 +352,9 @@ namespace CaptchaPack_Generator
 				//build the block with one captcha (32 bytes + 32 bytes + 1000 bits)
 				byte[] captcha_block = new byte[	32	+	32	+	125	];
 
-				System.Buffer.BlockCopy(	publicKey, 						0, captcha_block, 	0, 			32		);	//write there the pub
+				System.Buffer.BlockCopy(	publicKey, 								0, captcha_block, 	0, 			32		);	//write there the pub
 				System.Buffer.BlockCopy(	encrypted_ed25519_seed, 				0, captcha_block, 	32, 		32		);	//encrypted seed
-//				System.Buffer.BlockCopy(	Captcha.imageBits, 				0, captcha_block, 	32 + 32, 	125		);	//and 1000 bits of captcha image.
+//				System.Buffer.BlockCopy(	Captcha_generator.imageBits, 			0, captcha_block, 	32 + 32, 	125		);	//and 1000 bits of captcha image.
 				System.Buffer.BlockCopy(	captcha_image._imageBits, 				0, captcha_block, 	32 + 32, 	125		);	//and 1000 bits of captcha image.
 
 				System.Buffer.BlockCopy(
@@ -449,7 +449,7 @@ namespace CaptchaPack_Generator
 						)
 						+"\ncaptcha_block: "						+	captcha_block.Stringify()
 						+"\ncaptcha_image.ImageAsByteArray: "		+	captcha_image.ImageAsByteArray.Stringify()	//not compressed image, as bytearray
-						+"\nCaptcha.imageBits: "					+	Captcha.imageBits.Stringify()				//get compressed b/w bit-image from static field of current created captcha-object
+						+"\nCaptcha_generator.imageBits: "			+	Captcha_generator.imageBits.Stringify()				//get compressed b/w bit-image from static field of current created captcha-object
 						+"\ncaptcha_image._imageBits: "				+	captcha_image._imageBits.Stringify()		//get compressed b/w bit-image from specified captcha-object
 						+"\ncaptcha_image._imageBits_dataURI:\n"	+	captcha_image._imageBits_dataURI	//this can be opened in browser tab to see captcha.
 						+"\n\n\n\n\n\n"
@@ -470,7 +470,7 @@ namespace CaptchaPack_Generator
 			Ed25519.KeyPairFromSeed(out new_pubkey, out new_privkey, ByteEncryptionUtil.WrappedXor(encryptedSeed, captcha_answer + publicKey.Stringify()));
 			if(CompareTwoArrays(new_pubkey, publicKey)){
 				show_progress_and_write_data(index);								//write blocks in file or show progress.
-				//Console.WriteLine("Captcha index = "+index+" is solved!");
+				//Console.WriteLine("Captcha_generator index = "+index+" is solved!");
 				return true;
 			}else{
 				return false;
@@ -478,12 +478,12 @@ namespace CaptchaPack_Generator
 		}
 		
 		//	Save image into file, and put the answer in filename. Replace '?' to '_', because '?' not allowed in filename.			
-		public static void save_captchas_as_images(int i, Captcha captcha_image, bool bw = false){
+		public static void save_captchas_as_images(int i, Captcha_generator captcha_image, bool bw = false){
 				using(
 					Bitmap bmp = (
 									(bw == true)
 										?//save captcha image as compressed black-white-only PNG, which was been encoded by 1000 bits only.
-											Captcha.Convert(captcha_image._imageBits)
+											Captcha_generator.Convert(captcha_image._imageBits)
 										:// or take image of this captcha, as not compressed image-bytearray, and save it as PNG (many colors there)
 											(Bitmap)Bitmap.FromStream(new MemoryStream(captcha_image.ImageAsByteArray))
 					)
