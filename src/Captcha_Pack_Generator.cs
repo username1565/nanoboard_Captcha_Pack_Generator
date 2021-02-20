@@ -1,15 +1,28 @@
+	//-----Captcha_Pack_Generator.cs-----
+	//	This code can working autonomous
+	//	and this can be compiled in standalone exe,
+	//	after uncomment the commented code:
+	//Usings:
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Text;
-using Chaos.NaCl;
+
 using System.Security.Cryptography;
 using System.Linq;
 
+	//	Before using Chaos.NaCl, need to add Chaos.NaCl.dll, as reference, for compilation this:
+using Chaos.NaCl;
+
+	//	Compile a standalone exe:
+	//	DirWithCSFile>%WINDIR%\Microsoft.NET\Framework\v4.0.30319\csc.exe /t:exe /reference:"../Chaos.NaCl.dll" /out:"../Captcha_Pack_Generator.exe" Captcha_Pack_Generator.cs
+
 namespace CaptchaPack_Generator
 {
+	// The following commented code make this program full and independent:
+
 	//ByteStringExt.cs - need to show bytearrays as hex, stringify
     public static class ByteStringExt
     {
@@ -59,7 +72,7 @@ namespace CaptchaPack_Generator
     {
         public static object _lock = new object();
 
-        /* Appends bytes to the end of file */
+        // Appends bytes to the end of file
         public static int Append(string path, string @string)
         {
             lock (_lock) //sometimes .db3 file busy by another process, when program try to append string there. lock it.
@@ -68,7 +81,7 @@ namespace CaptchaPack_Generator
 			}
         }
 	
-        /* Appends bytes to the end of file */
+        // Appends bytes to the end of file
         public static int Append(string path, byte[] bytes)
         {
             lock (_lock)
@@ -85,7 +98,7 @@ namespace CaptchaPack_Generator
             }
         }
 
-        /* Writes bytes at specific file offset, overwrites existing bytes */
+        // Writes bytes at specific file offset, overwrites existing bytes
         public static void Write(string path, byte[] bytes, int offset)
         {
             lock (_lock)
@@ -100,7 +113,7 @@ namespace CaptchaPack_Generator
             }
         }
 		
-        /* Reads bytes from file using specific offset and length */
+        // Reads bytes from file using specific offset and length
         public static byte[] Read(string path, int offset, int length)
         {
             var bytes = new byte[length];
@@ -531,4 +544,6 @@ namespace CaptchaPack_Generator
 		}//end Main
 
 	}//end class Program
+
 }//end CaptchaPack_Generator namespace
+	//-----Captcha_Pack_Generator.cs-----
