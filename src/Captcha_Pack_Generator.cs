@@ -1,3 +1,4 @@
+//-----BEGIN comment in Captcha.cs-----
 	//-----Captcha_Pack_Generator.cs-----
 	//	This code can working autonomous
 	//	and this can be compiled in standalone exe,
@@ -18,9 +19,11 @@ using Chaos.NaCl;
 
 	//	Compile a standalone exe:
 	//	DirWithCSFile>%WINDIR%\Microsoft.NET\Framework\v4.0.30319\csc.exe /t:exe /reference:"../Chaos.NaCl.dll" /out:"../Captcha_Pack_Generator.exe" Captcha_Pack_Generator.cs
+//-----END comment in Captcha.cs-----
 
 namespace CaptchaPack_Generator
 {
+//-----BEGIN comment in Captcha.cs-----
 	// The following commented code make this program full and independent:
 
 	//ByteStringExt.cs - need to show bytearrays as hex, stringify
@@ -127,6 +130,7 @@ namespace CaptchaPack_Generator
             return bytes;
         }		
     }//end class FileUtil
+//-----END comment in Captcha.cs-----
 
 	//Generate random captcha text, and return captcha image for this text, with b/w image in Captcha_Generator.imageBits (static) or created_captcha_object._imagebits (non-static)
     public class Captcha_generator
