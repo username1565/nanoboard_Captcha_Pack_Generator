@@ -22,6 +22,20 @@ namespace CaptchaPack_Generator
             }
             return sb.ToString();
         }
+		
+		//int.Parse and Int32.Parse working bad for me.		See issue: https://github.com/nanoboard/nanoboard/issues/5
+		//So this function was been writed, to make this code more independent...
+        public static int parse_number(this string string_number)//this function return (int)number from (string)"number". Negative numbers supporting too.
+        {	if(string_number=="" || string_number == null){Console.WriteLine("NbPack.cs. parse_number. string_number is empty or null: (string_number == \"\"): "+string_number+", (string_number == null): "+(string_number == null)); return 0;}
+			string test = (new System.Text.RegularExpressions.Regex(@"\D")).Replace(string_number, "");
+            int test_length = test.Length;
+            int number = 0;
+            for(int i = ((char)test[0]=='-')?1:0; i < test_length; i++){
+                number += ((int)Char.GetNumericValue((char)test[i])*(int)Math.Pow(10,test_length-i-1));
+			}
+            number = ((char)test[0]=='-'?(0-number):(number));
+            return number;
+        }
 	}
 
 	//ByteEncryptionUtil.cs - need to encrypt generated Ed25519-seed, and decrypt it by publicKey and captcha_answer.
@@ -281,16 +295,24 @@ namespace CaptchaPack_Generator
 			//there is possible to logging anwsers, because solved once captcha can be used again, by index.
 			public static string 	@captchas_answers_file 			= "answers.bin"			;				//5 bytes with symbols in block in offsets (captcha_index * 5)
 			public static int 		CaptchaAnswerLength 			= 5						;				//bytelength of one captcha-answer: 5 symbols = 5 bytes;
-
+			//show dot in console, after each "one_dot" iterations.
+			public static int		one_dot							= 1024;														//	show one dot, when this number of captchas was been generated.
 			public static int		block_length_to_write			= 16384;													//	block length to write
 			public static byte[]	captchas_block_to_write			= new byte[block_length_to_write*CaptchaBlockLength]	;	//	write captchas by blocks 16384 captchas, to minimize the actions of writes.
 			public static byte[]	captcha_answers_block_to_write	= new byte[block_length_to_write*CaptchaAnswerLength]	;	//	write captcha-anwers by blocks 16384 answers, to minimize the actions of writes.
 			public static bool		save_the_captcha_answers 		= 	false;		//if need to write the generated anwsers (optionally value, and disabled, false, by default).
+			
+			
 	//method to generate captcha-pack-file
-		public static void generate_captcha_pack_file(bool save_captcha_images_as_files = false, bool verify_captcha_answer_before_writting = true, bool logging = false){
+		public static void generate_captcha_pack_file(bool save_captcha_images_as_files = false, bool verify_captcha_answer_before_writting = true, bool logging = false, int set_number_of_captchas_for_one_dot = 1024, int set_block_length_to_write = 16384){
+			one_dot 				= set_number_of_captchas_for_one_dot;
+			block_length_to_write 	= set_block_length_to_write;
+			
             byte[]	ed25519_seed = new byte[32];								//define the ed25519_seed array with length 32 bytes to store randomly generated Ed25519-seed.
-            RNGCryptoServiceProvider rand = new RNGCryptoServiceProvider();		//initialize object once, to take crypto-strength random there on each iteration.
-			Console.WriteLine("Starting to generate captchas...\nEach dot means already was been generated 1024 captchas,\nand this is contains in bytearray-buffer:");
+            System.Security.Cryptography.RNGCryptoServiceProvider rand = new System.Security.Cryptography.RNGCryptoServiceProvider();		//initialize object once, to take crypto-strength random there on each iteration.
+			Console.WriteLine("Starting to generate captchas...");
+			Console.WriteLine("save_captcha_images_as_files = "+save_captcha_images_as_files+", verify_captcha_answer_before_writting = "+verify_captcha_answer_before_writting+", logging = "+logging+", set_number_of_captchas_for_one_dot = "+set_number_of_captchas_for_one_dot+", set_block_length_to_write = "+set_block_length_to_write);			
+			Console.WriteLine("Each dot means already was been generated "+one_dot+" captchas,\nand this is contains in bytearray-buffer with size: "+block_length_to_write);
 			//Start to generate 1024*1024 different captchas:
 			for(int i = 0; i<1048576; i++){
 				//create new captcha with public static Randomizer, which was been already defined once. Don't create this Randomizer again and again for each object.	
@@ -473,7 +495,7 @@ namespace CaptchaPack_Generator
 		}
 
 		public static void show_progress_and_write_data(int index){
-			if(index%1024 == 0 && index!=0){
+			if(index%one_dot == 0 && index!=0){
 				Console.Write(".");
 			}
 			if(index%block_length_to_write == 0 && index!=0){
@@ -493,7 +515,19 @@ namespace CaptchaPack_Generator
 		
 		//	start Program to generate captchas...
 		public static void Main(string[] args){
-			generate_captcha_pack_file();
+			bool save_captcha_images_as_files 				=	false;
+			bool verify_captcha_answer_before_writting 		=	true;
+			bool logging 									=	false;
+			int set_one_dot 								=	1024;
+			int set_block_size 								=	16384;
+			
+			if(args.Length>=1){		if (bool.TryParse(args[0]		, out save_captcha_images_as_files))			{}		}
+			if(args.Length>=2){		if (bool.TryParse(args[1]		, out verify_captcha_answer_before_writting))	{}		}
+			if(args.Length>=3){		if (bool.TryParse(args[2]		, out logging))									{}		}
+			if(args.Length>=4){		if (int.TryParse(args[3]		, out set_one_dot))								{set_one_dot 		= (args[3]).parse_number();}		} //sometimes int.Parse, and Int32.Parse working incorrect
+			if(args.Length>=5){		if (Int32.TryParse(args[4]		, out set_block_size))							{set_block_size 	= (args[4]).parse_number();}		} //so with parse_number this working good.
+			
+			generate_captcha_pack_file(save_captcha_images_as_files, verify_captcha_answer_before_writting, logging, set_one_dot, set_block_size);
 		}//end Main
 
 	}//end class Program
