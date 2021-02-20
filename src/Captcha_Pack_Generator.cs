@@ -1,15 +1,31 @@
+//-----BEGIN comment in Captcha.cs-----
+	//-----Captcha_Pack_Generator.cs-----
+	//	This code can working autonomous
+	//	and this can be compiled in standalone exe,
+	//	after uncomment the commented code:
+	//Usings:
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Text;
-using Chaos.NaCl;
+
 using System.Security.Cryptography;
 using System.Linq;
 
+	//	Before using Chaos.NaCl, need to add Chaos.NaCl.dll, as reference, for compilation this:
+using Chaos.NaCl;
+
+	//	Compile a standalone exe:
+	//	DirWithCSFile>%WINDIR%\Microsoft.NET\Framework\v4.0.30319\csc.exe /t:exe /reference:"../Chaos.NaCl.dll" /out:"../Captcha_Pack_Generator.exe" Captcha_Pack_Generator.cs
+//-----END comment in Captcha.cs-----
+
 namespace CaptchaPack_Generator
 {
+//-----BEGIN comment in Captcha.cs-----
+	// The following commented code make this program full and independent:
+
 	//ByteStringExt.cs - need to show bytearrays as hex, stringify
     public static class ByteStringExt
     {
@@ -21,6 +37,20 @@ namespace CaptchaPack_Generator
                 sb.Append(b.ToString("x2"));
             }
             return sb.ToString();
+        }
+		
+		//int.Parse and Int32.Parse working bad for me.		See issue: https://github.com/nanoboard/nanoboard/issues/5
+		//So this function was been writed, to make this code more independent...
+        public static int parse_number(this string string_number)//this function return (int)number from (string)"number". Negative numbers supporting too.
+        {	if(string_number=="" || string_number == null){Console.WriteLine("NbPack.cs. parse_number. string_number is empty or null: (string_number == \"\"): "+string_number+", (string_number == null): "+(string_number == null)); return 0;}
+			string test = (new System.Text.RegularExpressions.Regex(@"\D")).Replace(string_number, "");
+            int test_length = test.Length;
+            int number = 0;
+            for(int i = ((char)test[0]=='-')?1:0; i < test_length; i++){
+                number += ((int)Char.GetNumericValue((char)test[i])*(int)Math.Pow(10,test_length-i-1));
+			}
+            number = ((char)test[0]=='-'?(0-number):(number));
+            return number;
         }
 	}
 
@@ -45,7 +75,7 @@ namespace CaptchaPack_Generator
     {
         public static object _lock = new object();
 
-        /* Appends bytes to the end of file */
+        // Appends bytes to the end of file
         public static int Append(string path, string @string)
         {
             lock (_lock) //sometimes .db3 file busy by another process, when program try to append string there. lock it.
@@ -54,7 +84,7 @@ namespace CaptchaPack_Generator
 			}
         }
 	
-        /* Appends bytes to the end of file */
+        // Appends bytes to the end of file
         public static int Append(string path, byte[] bytes)
         {
             lock (_lock)
@@ -71,7 +101,7 @@ namespace CaptchaPack_Generator
             }
         }
 
-        /* Writes bytes at specific file offset, overwrites existing bytes */
+        // Writes bytes at specific file offset, overwrites existing bytes
         public static void Write(string path, byte[] bytes, int offset)
         {
             lock (_lock)
@@ -86,7 +116,7 @@ namespace CaptchaPack_Generator
             }
         }
 		
-        /* Reads bytes from file using specific offset and length */
+        // Reads bytes from file using specific offset and length
         public static byte[] Read(string path, int offset, int length)
         {
             var bytes = new byte[length];
@@ -100,9 +130,10 @@ namespace CaptchaPack_Generator
             return bytes;
         }		
     }//end class FileUtil
+//-----END comment in Captcha.cs-----
 
-	//Generate random captcha text, and return captcha image for this text, with b/w image in Captcha.imageBits (static) or created_captcha_object._imagebits (non-static)
-    public class Captcha
+	//Generate random captcha text, and return captcha image for this text, with b/w image in Captcha_Generator.imageBits (static) or created_captcha_object._imagebits (non-static)
+    public class Captcha_generator
     {
 //        private static Random Randomizer = new Random(DateTime.Now.Second);	//old code
 		private static Random Randomizer = null;		//make this more crypto-strength, and create this object once in Program class.
@@ -113,7 +144,7 @@ namespace CaptchaPack_Generator
 		public static string DataUriPngPrefix = "data:image/png;base64,";
 		public string _imageBits_dataURI { get; set; }
 
-        public Captcha(Random set_defined_Randomizer) // Captcha-object constructor
+        public Captcha_generator(Random set_defined_Randomizer) // Captcha-object constructor
         {
 			Randomizer = set_defined_Randomizer;		//set already predefined randomizer
             Text = GetRandomText();						//Generate random captcha-text.
@@ -195,7 +226,7 @@ namespace CaptchaPack_Generator
             return bmp;
         }
 
-		//return captcha image from specified/generated text, and set not compressed image, and compressed image-bits as bytearray Captcha.imageBits
+		//return captcha image from specified/generated text, and set not compressed image, and compressed image-bits as bytearray Captcha_generator.imageBits
         private static byte[] CreateCaptcha(string text)
         {
             byte[] byteArray = null;
@@ -245,7 +276,7 @@ namespace CaptchaPack_Generator
             return byteArray;	//and return not compressed image, as bytearray
         }
 
-    }//end class Captcha
+    }//end class Captcha_generator
 	
 	public class Program{
 		//make this Randomizer more crypto-strength, and define this once
@@ -281,20 +312,28 @@ namespace CaptchaPack_Generator
 			//there is possible to logging anwsers, because solved once captcha can be used again, by index.
 			public static string 	@captchas_answers_file 			= "answers.bin"			;				//5 bytes with symbols in block in offsets (captcha_index * 5)
 			public static int 		CaptchaAnswerLength 			= 5						;				//bytelength of one captcha-answer: 5 symbols = 5 bytes;
-
+			//show dot in console, after each "one_dot" iterations.
+			public static int		one_dot							= 1024;														//	show one dot, when this number of captchas was been generated.
 			public static int		block_length_to_write			= 16384;													//	block length to write
 			public static byte[]	captchas_block_to_write			= new byte[block_length_to_write*CaptchaBlockLength]	;	//	write captchas by blocks 16384 captchas, to minimize the actions of writes.
 			public static byte[]	captcha_answers_block_to_write	= new byte[block_length_to_write*CaptchaAnswerLength]	;	//	write captcha-anwers by blocks 16384 answers, to minimize the actions of writes.
 			public static bool		save_the_captcha_answers 		= 	false;		//if need to write the generated anwsers (optionally value, and disabled, false, by default).
+			
+			
 	//method to generate captcha-pack-file
-		public static void generate_captcha_pack_file(bool save_captcha_images_as_files = false, bool verify_captcha_answer_before_writting = true, bool logging = false){
+		public static void generate_captcha_pack_file(bool save_captcha_images_as_files = false, bool verify_captcha_answer_before_writting = true, bool logging = false, int set_number_of_captchas_for_one_dot = 1024, int set_block_length_to_write = 16384){
+			one_dot 				= set_number_of_captchas_for_one_dot;
+			block_length_to_write 	= set_block_length_to_write;
+			
             byte[]	ed25519_seed = new byte[32];								//define the ed25519_seed array with length 32 bytes to store randomly generated Ed25519-seed.
-            RNGCryptoServiceProvider rand = new RNGCryptoServiceProvider();		//initialize object once, to take crypto-strength random there on each iteration.
-			Console.WriteLine("Starting to generate captchas...\nEach dot means already was been generated 1024 captchas,\nand this is contains in bytearray-buffer:");
+            System.Security.Cryptography.RNGCryptoServiceProvider rand = new System.Security.Cryptography.RNGCryptoServiceProvider();		//initialize object once, to take crypto-strength random there on each iteration.
+			Console.WriteLine("Starting to generate captchas...");
+			Console.WriteLine("save_captcha_images_as_files = "+save_captcha_images_as_files+", verify_captcha_answer_before_writting = "+verify_captcha_answer_before_writting+", logging = "+logging+", set_number_of_captchas_for_one_dot = "+set_number_of_captchas_for_one_dot+", set_block_length_to_write = "+set_block_length_to_write);			
+			Console.WriteLine("Each dot means already was been generated "+one_dot+" captchas,\nand this is contains in bytearray-buffer with size: "+block_length_to_write);
 			//Start to generate 1024*1024 different captchas:
 			for(int i = 0; i<1048576; i++){
 				//create new captcha with public static Randomizer, which was been already defined once. Don't create this Randomizer again and again for each object.	
-				Captcha captcha_image = new Captcha(Randomizer);
+				Captcha_generator captcha_image = new Captcha_generator(Randomizer);
 				//	generate in the cycle the many bitmaps 1000 bits = 1000 pixels, black or white, 20x50 with captchas, and save this with answer filename.
 
 				if	(	save_captcha_images_as_files 	== 	true	){	//as optional param.
@@ -330,9 +369,9 @@ namespace CaptchaPack_Generator
 				//build the block with one captcha (32 bytes + 32 bytes + 1000 bits)
 				byte[] captcha_block = new byte[	32	+	32	+	125	];
 
-				System.Buffer.BlockCopy(	publicKey, 						0, captcha_block, 	0, 			32		);	//write there the pub
+				System.Buffer.BlockCopy(	publicKey, 								0, captcha_block, 	0, 			32		);	//write there the pub
 				System.Buffer.BlockCopy(	encrypted_ed25519_seed, 				0, captcha_block, 	32, 		32		);	//encrypted seed
-//				System.Buffer.BlockCopy(	Captcha.imageBits, 				0, captcha_block, 	32 + 32, 	125		);	//and 1000 bits of captcha image.
+//				System.Buffer.BlockCopy(	Captcha_generator.imageBits, 			0, captcha_block, 	32 + 32, 	125		);	//and 1000 bits of captcha image.
 				System.Buffer.BlockCopy(	captcha_image._imageBits, 				0, captcha_block, 	32 + 32, 	125		);	//and 1000 bits of captcha image.
 
 				System.Buffer.BlockCopy(
@@ -427,7 +466,7 @@ namespace CaptchaPack_Generator
 						)
 						+"\ncaptcha_block: "						+	captcha_block.Stringify()
 						+"\ncaptcha_image.ImageAsByteArray: "		+	captcha_image.ImageAsByteArray.Stringify()	//not compressed image, as bytearray
-						+"\nCaptcha.imageBits: "					+	Captcha.imageBits.Stringify()				//get compressed b/w bit-image from static field of current created captcha-object
+						+"\nCaptcha_generator.imageBits: "			+	Captcha_generator.imageBits.Stringify()				//get compressed b/w bit-image from static field of current created captcha-object
 						+"\ncaptcha_image._imageBits: "				+	captcha_image._imageBits.Stringify()		//get compressed b/w bit-image from specified captcha-object
 						+"\ncaptcha_image._imageBits_dataURI:\n"	+	captcha_image._imageBits_dataURI	//this can be opened in browser tab to see captcha.
 						+"\n\n\n\n\n\n"
@@ -448,7 +487,7 @@ namespace CaptchaPack_Generator
 			Ed25519.KeyPairFromSeed(out new_pubkey, out new_privkey, ByteEncryptionUtil.WrappedXor(encryptedSeed, captcha_answer + publicKey.Stringify()));
 			if(CompareTwoArrays(new_pubkey, publicKey)){
 				show_progress_and_write_data(index);								//write blocks in file or show progress.
-				//Console.WriteLine("Captcha index = "+index+" is solved!");
+				//Console.WriteLine("Captcha_generator index = "+index+" is solved!");
 				return true;
 			}else{
 				return false;
@@ -456,12 +495,12 @@ namespace CaptchaPack_Generator
 		}
 		
 		//	Save image into file, and put the answer in filename. Replace '?' to '_', because '?' not allowed in filename.			
-		public static void save_captchas_as_images(int i, Captcha captcha_image, bool bw = false){
+		public static void save_captchas_as_images(int i, Captcha_generator captcha_image, bool bw = false){
 				using(
 					Bitmap bmp = (
 									(bw == true)
 										?//save captcha image as compressed black-white-only PNG, which was been encoded by 1000 bits only.
-											Captcha.Convert(captcha_image._imageBits)
+											Captcha_generator.Convert(captcha_image._imageBits)
 										:// or take image of this captcha, as not compressed image-bytearray, and save it as PNG (many colors there)
 											(Bitmap)Bitmap.FromStream(new MemoryStream(captcha_image.ImageAsByteArray))
 					)
@@ -473,7 +512,7 @@ namespace CaptchaPack_Generator
 		}
 
 		public static void show_progress_and_write_data(int index){
-			if(index%1024 == 0 && index!=0){
+			if(index%one_dot == 0 && index!=0){
 				Console.Write(".");
 			}
 			if(index%block_length_to_write == 0 && index!=0){
@@ -493,8 +532,22 @@ namespace CaptchaPack_Generator
 		
 		//	start Program to generate captchas...
 		public static void Main(string[] args){
-			generate_captcha_pack_file();
+			bool save_captcha_images_as_files 				=	false;
+			bool verify_captcha_answer_before_writting 		=	true;
+			bool logging 									=	false;
+			int set_one_dot 								=	1024;
+			int set_block_size 								=	16384;
+			
+			if(args.Length>=1){		if (bool.TryParse(args[0]		, out save_captcha_images_as_files))			{}		}
+			if(args.Length>=2){		if (bool.TryParse(args[1]		, out verify_captcha_answer_before_writting))	{}		}
+			if(args.Length>=3){		if (bool.TryParse(args[2]		, out logging))									{}		}
+			if(args.Length>=4){		if (int.TryParse(args[3]		, out set_one_dot))								{set_one_dot 		= (args[3]).parse_number();}		} //sometimes int.Parse, and Int32.Parse working incorrect
+			if(args.Length>=5){		if (Int32.TryParse(args[4]		, out set_block_size))							{set_block_size 	= (args[4]).parse_number();}		} //so with parse_number this working good.
+			
+			generate_captcha_pack_file(save_captcha_images_as_files, verify_captcha_answer_before_writting, logging, set_one_dot, set_block_size);
 		}//end Main
 
 	}//end class Program
+
 }//end CaptchaPack_Generator namespace
+	//-----Captcha_Pack_Generator.cs-----
